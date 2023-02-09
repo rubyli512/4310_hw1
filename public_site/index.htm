@@ -1,5 +1,265 @@
 <html>
+
+<head>
+  <title>Ruby Li INFO 4310 HW 1</title>
+  <meta charset="UTF-8">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+</head>
+<!-- css style for gridlines -->
+<style>
+  .gridlines line {
+    stroke: rgb(223, 223, 223);
+  }
+
+  .gridlines .domain {
+    stroke: none;
+  }
+</style>
+
 <body>
-  <p> All of your publicly available files should live in public_site. Make sure index.htm is your main page </p>
+  <!-- <p> All of your publicly available files should live in public_site. Make sure index.htm is your main page </p> -->
+
+  <h3>Ruby Li, ZL526</h3>
+
+  <p id="p1">
+
+  <h4>SF Map Showing Non-DPW-Owned (Red) vs DPW-Owned (Blue) Trees</h4>
+
+  <br>
+  Regions are colored by the percentage of DPW-owned trees out of total number of trees in this region. Greener colors
+  indicate a lower density, while yellower colors indicate a higher density.
+  </br>
+
+  <!-- create a canvas for a map-->
+  <svg id="map" width="800 " height="800" style="margin: 20px"></svg>
+
+  <script>
+    const map = d3.select("svg#map");
+
+    // get svg attributes and set the graph dimensions
+    const mapWidth = map.attr("width") - 20;
+    const mapHeight = map.attr("height") - 20;
+
+
+    const getData = async function () {
+
+      // load the data on the map
+      const sf = await d3.json("./SF-Neighborhoods.geo.json");
+
+      // examine sf data structure
+      // console.log(sf);
+
+      // load the data on the list of trees 
+      const treeList = await d3.csv("./Street_Tree_List-2022-01-30_FILTERED_FINAL.csv");
+
+      // examine treeList data structure
+      // console.log(treeList);
+
+      // load the data for the chart: percentage of DPW-maintained vs non-DPW-maintained trees
+      const density = await d3.csv("./density.csv");
+
+      // examine density data structure 
+      // console.log(density)
+
+      // creating variables for zips and zipsMesh 
+      var zips = topojson.feature(sf, sf.objects.SFNeighborhoods);
+      var zipsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);
+
+      // create a projection of latitude and longtitude to coordinates on the map
+      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], zips);
+      var path = d3.geoPath().projection(projection);
+
+
+      // calculate the percentage of DPW-maintained trees in each neighborhood
+      zips.features.forEach(zip => {
+
+        zip.properties.DPWcount = 0;
+        zip.properties.nonDPWcount = 0;
+
+        treeList.forEach(d => {
+
+          if (d3.geoContains(zip, [d.Longitude, d.Latitude])) {
+            if (d.qLegalStatus == "DPW Maintained") {
+
+              zip.properties.DPWcount++;
+            } else {
+              zip.properties.nonDPWcount++;
+            }
+          };
+
+
+        });
+
+        // create a new variable in the zips dataset to record the percentage of DPW-maintained trees
+        zip.properties.DPWdensity = zip.properties.DPWcount / (zip.properties.DPWcount + zip.properties.nonDPWcount);
+
+      })
+
+      // attempted to bake in the data
+      // console.log(zips);
+      // console.log(JSON.stringify(zips));
+
+      // create a new variable in treeList to record the coordinates of each tree
+      treeList.forEach(d => {
+
+        d.Position = projection([d.Longitude, d.Latitude]);
+
+      });
+
+
+      // create a scale to map DPW vs non-DPW to fill color 
+      var fillScale = d3.scaleOrdinal().domain(['non_PDW', 'DPW Maintained'])
+        .range(['red', 'darkblue']);
+
+      // testing fillScale
+      // console.log(fillScale("DPW Maintained"));
+      // console.log(fillScale("non_DPW"))
+
+      // create a color scale to color the regions by percentage of DPW-maintained trees 
+      let densityExtent = [0, 1];
+      let colorScale = d3.scaleSequential(d3.interpolateViridis).domain(densityExtent);
+
+      // testing colorScale
+      // console.log(colorScale(0.01))
+      // console.log(colorScale(0.91))
+
+      // create a g tag to contain map elements.
+      var viewport = map.append('g').attr("id", "viewport");
+
+      // create a path element for each neighborhood, filling in colors according to percentage 
+      viewport.selectAll("path.zips")
+        .data(zips.features)
+        .join("path")
+        .attr("d", path)
+        .style("stroke", "none")
+        .style("fill", d => colorScale(d.properties.DPWdensity));
+
+      // create a path element for each neighborhood, coloring the outlines
+      let zips_mesh_path = viewport.append("path")
+        .datum(zipsMesh)
+        .attr("d", path)
+        .style("stroke-width", 1)
+        .style("stroke", "black")
+        .style("fill", "none");
+
+      // draw circles on the map, coloring by whether DPW-maintained or not
+      map.selectAll("circle").data(treeList)
+        .join("circle")
+        .attr("r", 1.5)
+        .attr("fill", d => fillScale(d['qLegalStatus']))
+        .attr("opacity", 0.6)
+        .attr("cx", d => d.Position[0])
+        .attr("cy", d => d.Position[1]);
+
+
+    }
+
+    // call the function
+    getData();
+
+  </script>
+
+
+  </p>
+
+  <p>
+  <h4>Comparing Non-DPW-Owned (Red) and DPW-Owned Trees (Blue) by Site Information in SF</h4>
+  <svg id="graph" width="1200" height="1300"></svg>
+
+  <script>
+
+    // create a canvas for the graph
+    const graph = d3.select("svg#graph");
+
+    const getsumData = async function () {
+
+      // load the data counting treees by site types
+      const sumData = await d3.csv("treeList_sum.csv");
+
+      // examine the sumData data structure
+      // console.log(sumData);
+
+      // get svg attributes and set the graph dimensions
+      const width = graph.attr("width");
+      const height = graph.attr("height");
+      const margins = { top: 50, right: 50, bottom: 150, left: 50 };
+      const graphWidth = width - margins.left - margins.right;
+      const graphHeight = height - margins.top - margins.bottom;
+
+      // create g tags for chart area and annotations 
+      let annotations = graph.append("g").attr("id", "annotations");
+      let graphArea = graph.append("g").attr("transform", `translate(${margins.left}, ${margins.top})`).attr("id", "points");
+
+      // create an empty array that will contain all the site type names
+      let siteArray = [];
+      // console.log(siteArray);
+
+      // adding site type names to the array
+      sumData.forEach(d => {
+        siteArray.push(d.qSiteInfo);
+      })
+
+      // console.log(siteArray)
+
+      // create the x axis scale that contains all the site type names
+      const siteScale = d3.scaleBand().domain(siteArray).range([0, graphWidth])
+        .padding(0.1);
+
+      // create the y axis scale for tree count
+      const countScale = d3.scaleSymlog().domain([0, 29150]).range([graphHeight, 0])
+
+      // create axes
+      let leftAxis = d3.axisLeft(countScale);
+      annotations.append("g").attr("transform", `translate(${margins.left - 10},${margins.top})`).call(leftAxis);
+
+      let bottomAxis = d3.axisBottom(siteScale);
+      let bottom_Axis_g = annotations.append('g').attr("transform", `translate(${margins.left},${margins.top + graphHeight})`).call(bottomAxis);
+      bottom_Axis_g.selectAll("text").attr("transform", "rotate(60)").attr("text-anchor", " start  ");
+
+      // // create gridlines
+      let leftGridlines = d3.axisLeft(countScale).tickFormat('').tickSize(-graphWidth - 10);
+      annotations.append('g').attr('class', 'gridlines').attr("transform", `translate(${margins.left - 10},${margins.top})`).call(leftGridlines);
+
+      let bottomGridlines = d3.axisBottom(siteScale).tickFormat('').tickSize(-graphHeight - 10);
+      annotations.append('g').attr('class', 'gridlines').attr("transform", `translate(${margins.left},${graphHeight + margins.top + 10})`).call(bottomGridlines);
+
+      // create bars for the total number of trees
+      graphArea.selectAll('rect.bar').data(sumData)
+        .join('rect').attr('class', 'bar')
+        .attr("fill", "crimson")
+        .attr("x", d => siteScale(d.qSiteInfo))
+        .attr("y", d => countScale(d.total))
+        .attr("height", d => (countScale(0) - countScale(d.total)))
+        .attr("width", siteScale.bandwidth());
+
+      // create bars for only the DPW-maintained trees
+      graphArea.selectAll('rect.percentBar').data(sumData)
+        .join('rect').attr('class', 'percentBar')
+        .attr("fill", "lightblue")
+        .attr("x", d => siteScale(d.qSiteInfo))
+        .attr("y", d => countScale(d.num_DPW))
+        .attr("height", d => (countScale(0) - countScale(d.num_DPW)))
+        .attr("width", siteScale.bandwidth());
+
+      // create texts on top of each bar for the total number of trees
+      graphArea.selectAll('text.numbers').data(sumData)
+        .join('text').attr('class', 'numbers')
+        .attr("text-anchor", " middle")
+        .attr("font-size", "10px")
+        .attr("x", d => siteScale(d.qSiteInfo) + siteScale.bandwidth() / 2)
+        .attr('y', d => countScale(d.total) - 10)
+        .text(d => d.total);
+
+    };
+
+    // call the function
+    getsumData();
+
+  </script>
+
+  </p>
+
 </body>
+
 </html>

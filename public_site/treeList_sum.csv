@@ -1,0 +1,17 @@
+﻿qSiteInfo,total,num_DPW,DPW,non_DPW
+Sidewalk: Curb side : Cutout,29150,26368,0.904562607,0.095437393
+Sidewalk: Property side : Yard,2699,2637,0.977028529,0.022971471
+Sidewalk: Curb side : Yard,2166,2126,0.981532779,0.018467221
+Median : Cutout,1080,994,0.92037037,0.07962963
+Front Yard : Yard,600,531,0.885,0.115
+Sidewalk: Curb side : Pot,432,425,0.983796296,0.016203704
+Median : Yard,366,350,0.956284153,0.043715847
+Side Yard : Yard,217,213,0.98156682,0.01843318
+Sidewalk: Property side : Cutout,133,75,0.563909774,0.436090226
+Back Yard : Yard,81,70,0.864197531,0.135802469
+Front Yard : Cutout,29,10,0.344827586,0.655172414
+Back Yard : Cutout,5,0,0,1
+Side Yard : Cutout,5,4,0.8,0.2
+Sidewalk: Property side : Pot,3,2,0.666666667,0.333333333
+Front Yard : Pot,2,1,0.5,0.5
+Sidewalk: Curb side : Hanging Pot,1,1,1,0
